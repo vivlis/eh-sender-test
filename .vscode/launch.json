@@ -12,6 +12,9 @@
             "program": "${workspaceFolder}/main.go",
             "env": {
                 "EHProducer": "",
+                "BatchSize": "1",
+                "NoEvents": "1",
+                "MaxNoPart": "0",
             }
         }
     ]

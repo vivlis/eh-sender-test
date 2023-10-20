@@ -7,6 +7,7 @@ import (
 	"log"
 	"math/rand"
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/messaging/azeventhubs"
@@ -33,40 +34,49 @@ func main() {
 
 	data, props := getMsg()
 
+	// default batch size
 	batchSize := 10
+	// get batch size from env
+	size, _ := strconv.Atoi(os.Getenv("BatchSize"))
+	if size != 0 {
+		batchSize = size
+	}
 	batchMsg := 0
+
+	// default number of msgs
 	msgs := 1
-	maxNumPart := 4
+	// get number of msgs from env
+	numMsg, _ := strconv.Atoi(os.Getenv("NoEvents"))
+	if numMsg != 0 {
+		msgs = numMsg
+	}
 
-	pID := fmt.Sprintf(`%d`, rand.Intn(maxNumPart))
-	batch, _ := clProd.NewEventDataBatch(context.Background(), &azeventhubs.EventDataBatchOptions{
-		PartitionID: &pID,
-	})
+	// default number of partitions
+	maxNumPart := 0
+	// get number of partitions from env
+	numPart, _ := strconv.Atoi(os.Getenv("MaxNoPart"))
+	if numPart != 0 {
+		maxNumPart = numPart
+	}
 
+	var pID string
+	batch := &azeventhubs.EventDataBatch{}
+	batch = nil
 	// time stamp for id
 	t := time.Now().Format("2006-01-02-15:04:05")
 
 	for i := 1; i <= msgs; i++ {
 		batchMsg++
-		// err = hub.Send(ctx, &eventhub.Event{
-		// 	Data:       []byte(data),
-		// 	ID:         fmt.Sprintf(`%d`, i),
-		// 	Properties: props,
-		// })
-
-		// events = append(events, &eventhub.Event{
-		// 	Data:       []byte(data),
-		// 	ID:         fmt.Sprintf(`%d`, i),
-		// 	Properties: props,
-		// })
-		// log.Printf("Added %d message\n", i)
 
 		if batch == nil {
-			pID = fmt.Sprintf(`%d`, rand.Intn(maxNumPart))
-			// pID = `3`
-			batch, err = clProd.NewEventDataBatch(context.Background(), &azeventhubs.EventDataBatchOptions{
-				PartitionID: &pID,
-			})
+
+			bop := &azeventhubs.EventDataBatchOptions{}
+			if maxNumPart > 0 {
+				pID = fmt.Sprintf(`%d`, rand.Intn(maxNumPart))
+				bop.PartitionID = &pID
+			}
+
+			batch, err = clProd.NewEventDataBatch(context.Background(), bop)
 			if err != nil {
 				log.Printf("Failed to create batch: %s", err.Error())
 				return
